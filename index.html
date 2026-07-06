@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Open Canvas.ai — Draw with Your Hands (Camera Fixed)</title>
-    <meta name="description" content="Open Canvas.ai: Fixed camera access for GitHub Pages. Draw using hand tracking via your camera.">
+    <title>Open Canvas.ai — Draw with Your Hands</title>
+    <meta name="description" content="Open Canvas.ai: Open-source web app to draw using hand tracking via your camera.">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
     <style>
@@ -16,28 +16,21 @@
         *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
         body {
             font-family: 'Space Grotesk', sans-serif;
-            background: var(--bg);
-            overflow: hidden;
+            background: var(--bg); overflow: hidden;
             width: 100vw; height: 100vh;
-            touch-action: none;
-            -webkit-user-select: none;
-            user-select: none;
+            touch-action: none; -webkit-user-select: none; user-select: none;
         }
-        /* Ambient background */
         #ambientBg {
             position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
             pointer-events: none; z-index: 0;
             background:
                 radial-gradient(ellipse at 15% 85%, rgba(0,229,160,0.04) 0%, transparent 45%),
                 radial-gradient(ellipse at 85% 15%, rgba(0,160,230,0.035) 0%, transparent 45%),
-                radial-gradient(ellipse at 50% 50%, rgba(255,255,255,0.008) 0%, transparent 60%),
                 var(--bg);
         }
-        /* Canvases */
         #bgCanvas, #drawCanvas { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; }
         #bgCanvas { z-index: 1; }
         #drawCanvas { z-index: 2; cursor: crosshair; }
-        /* Grid overlay */
         #gridOverlay {
             position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
             pointer-events: none; z-index: 3; opacity: 0; transition: opacity .3s;
@@ -46,7 +39,6 @@
             background-size: 40px 40px;
         }
         #gridOverlay.visible { opacity: 1; }
-        /* Finger cursor (visual feedback) */
         #fingerCursor {
             position: fixed; pointer-events: none; border-radius: 50%;
             z-index: 80; transform: translate(-50%, -50%); display: none;
@@ -54,129 +46,58 @@
         }
         #fingerCursor.idle { border: 2px solid rgba(255,255,255,0.5); box-shadow: 0 0 8px rgba(255,255,255,0.1); }
         #fingerCursor.active { border: 2.5px solid var(--accent); box-shadow: 0 0 18px rgba(0,229,160,0.4), 0 0 40px rgba(0,229,160,0.15); }
-        /* Panels (glassmorphism) */
         .panel {
-            position: fixed;
-            background: var(--panel);
-            backdrop-filter: blur(24px);
-            -webkit-backdrop-filter: blur(24px);
-            border: 1px solid var(--panel-border);
-            border-radius: var(--radius);
-            z-index: 100;
-            box-shadow: 0 8px 40px rgba(0,0,0,0.45), inset 0 0 0 1px rgba(255,255,255,0.03);
+            position: fixed; background: var(--panel);
+            backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px);
+            border: 1px solid var(--panel-border); border-radius: var(--radius);
+            z-index: 100; box-shadow: 0 8px 40px rgba(0,0,0,0.45), inset 0 0 0 1px rgba(255,255,255,0.03);
             animation: panelIn .5s cubic-bezier(.16,1,.3,1) both;
         }
         @keyframes panelIn { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
-        /* Top bar */
-        .top-bar {
-            top: 14px; left: 50%; transform: translateX(-50%);
-            display: flex; align-items: center; gap: 4px; padding: 5px 10px;
-        }
+        .top-bar { top: 14px; left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 4px; padding: 5px 10px; }
         .logo { display: flex; align-items: center; gap: 8px; padding-right: 10px; border-right: 1px solid var(--panel-border); margin-right: 4px; }
-        .logo-icon {
-            width: 30px; height: 30px; background: var(--accent); border-radius: 9px;
-            display: flex; align-items: center; justify-content: center;
-            box-shadow: 0 0 16px rgba(0,229,160,0.25);
-        }
+        .logo-icon { width: 30px; height: 30px; background: var(--accent); border-radius: 9px; display: flex; align-items: center; justify-content: center; box-shadow: 0 0 16px rgba(0,229,160,0.25); }
         .logo-icon svg { width: 16px; height: 16px; }
         .logo-text { font-weight: 600; font-size: 13.5px; color: var(--text); white-space: nowrap; letter-spacing: -.3px; }
         .logo-text span { color: var(--accent); }
-        /* Status dots */
         .status-dot { width: 7px; height: 7px; border-radius: 50%; display: inline-block; margin-right: 4px; vertical-align: middle; }
         .status-dot.on { background: var(--accent); box-shadow: 0 0 6px var(--accent); }
         .status-dot.off { background: var(--text-muted); }
-        .status-dot.rec { background: var(--danger); box-shadow: 0 0 6px var(--danger); animation: pulse 1s infinite; }
-        @keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:.4; } }
         .status-label { font-size: 10px; color: var(--text-muted); white-space: nowrap; }
-        /* Toolbar buttons */
-        .tb {
-            width: 34px; height: 34px; border-radius: 9px; border: none;
-            background: transparent; color: var(--text-muted);
-            cursor: pointer; display: flex; align-items: center; justify-content: center;
-            transition: all .12s; position: relative; flex-shrink: 0;
-        }
+        .tb { width: 34px; height: 34px; border-radius: 9px; border: none; background: transparent; color: var(--text-muted); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all .12s; position: relative; flex-shrink: 0; }
         .tb:hover { background: rgba(255,255,255,0.06); color: var(--text); }
         .tb.active { background: var(--accent-dim); color: var(--accent); }
         .tb svg { width: 17px; height: 17px; pointer-events: none; }
         .sep { width: 1px; height: 22px; background: var(--panel-border); margin: 0 3px; flex-shrink: 0; }
-        /* Left toolbar */
         .left-toolbar { left: 14px; top: 50%; transform: translateY(-50%); display: flex; flex-direction: column; gap: 3px; padding: 5px; }
-        /* Bottom bar */
-        .bottom-bar {
-            bottom: 14px; left: 50%; transform: translateX(-50%);
-            display: flex; align-items: center; gap: 10px; padding: 7px 14px;
-            flex-wrap: wrap; justify-content: center;
-        }
-        .current-color { width: 30px; height: 30px; border-radius: 8px; border: 2px solid rgba(255,255,255,0.15);
-            flex-shrink: 0; transition: background .15s, box-shadow .15s; box-shadow: 0 0 12px rgba(0,0,0,0.3); }
+        .bottom-bar { bottom: 14px; left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 10px; padding: 7px 14px; flex-wrap: wrap; justify-content: center; }
+        .current-color { width: 30px; height: 30px; border-radius: 8px; border: 2px solid rgba(255,255,255,0.15); flex-shrink: 0; transition: background .15s, box-shadow .15s; box-shadow: 0 0 12px rgba(0,0,0,0.3); }
         .color-swatches { display: flex; gap: 3px; align-items: center; flex-wrap: wrap; max-width: 290px; }
-        .csw { width: 22px; height: 22px; border-radius: 6px; border: 2px solid transparent; cursor: pointer;
-            transition: all .12s; flex-shrink: 0; }
+        .csw { width: 22px; height: 22px; border-radius: 6px; border: 2px solid transparent; cursor: pointer; transition: all .12s; flex-shrink: 0; }
         .csw:hover { transform: scale(1.18); }
         .csw.active { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-dim); }
         .cpick-wrap { position: relative; width: 22px; height: 22px; flex-shrink: 0; }
         .cpick-wrap input[type="color"] { position: absolute; width: 100%; height: 100%; opacity: 0; cursor: pointer; }
-        .cpick-display {
-            width: 22px; height: 22px; border-radius: 6px;
-            border: 2px dashed var(--text-muted);
-            display: flex; align-items: center; justify-content: center; pointer-events: none;
-        }
+        .cpick-display { width: 22px; height: 22px; border-radius: 6px; border: 2px dashed var(--text-muted); display: flex; align-items: center; justify-content: center; pointer-events: none; }
         .cpick-display svg { width: 10px; height: 10px; color: var(--text-muted); }
         .bar-sep { width: 1px; height: 28px; background: var(--panel-border); flex-shrink: 0; }
-        /* Sliders */
         .slider-group { display: flex; align-items: center; gap: 6px; }
         .slider-label { font-size: 10.5px; color: var(--text-muted); white-space: nowrap; }
         .slider-val { font-size: 10.5px; color: var(--text); font-weight: 500; min-width: 22px; text-align: right; font-family: 'JetBrains Mono', monospace; }
-        input[type="range"] {
-            -webkit-appearance: none; appearance: none;
-            width: 72px; height: 4px; border-radius: 2px;
-            background: rgba(255,255,255,0.1); outline: none;
-        }
-        input[type="range"]::-webkit-slider-thumb {
-            -webkit-appearance: none; width: 13px; height: 13px; border-radius: 50%;
-            background: var(--accent); cursor: pointer;
-            box-shadow: 0 0 8px rgba(0,229,160,0.3);
-        }
-        input[type="range"]::-moz-range-thumb {
-            width: 13px; height: 13px; border-radius: 50%;
-            background: var(--accent); cursor: pointer; border: none;
-        }
-        /* Pinch hint */
-        #pinchHint {
-            position: fixed; bottom: 90px; left: 50%; transform: translateX(-50%);
-            z-index: 110; background: var(--panel); backdrop-filter: blur(16px);
-            border: 1px solid var(--panel-border); border-radius: 12px;
-            padding: 10px 20px; display: none; align-items: center; gap: 10px;
-            animation: panelIn .4s ease both;
-        }
+        input[type="range"] { -webkit-appearance: none; appearance: none; width: 72px; height: 4px; border-radius: 2px; background: rgba(255,255,255,0.1); outline: none; }
+        input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; width: 13px; height: 13px; border-radius: 50%; background: var(--accent); cursor: pointer; box-shadow: 0 0 8px rgba(0,229,160,0.3); }
+        input[type="range"]::-moz-range-thumb { width: 13px; height: 13px; border-radius: 50%; background: var(--accent); cursor: pointer; border: none; }
+        #pinchHint { position: fixed; bottom: 90px; left: 50%; transform: translateX(-50%); z-index: 110; background: var(--panel); backdrop-filter: blur(16px); border: 1px solid var(--panel-border); border-radius: 12px; padding: 10px 20px; display: none; align-items: center; gap: 10px; animation: panelIn .4s ease both; }
         #pinchHint.show { display: flex; }
-        .pinch-icon { width: 36px; height: 36px; border-radius: 50%; background: var(--accent-dim);
-            display: flex; align-items: center; justify-content: center; }
+        .pinch-icon { width: 36px; height: 36px; border-radius: 50%; background: var(--accent-dim); display: flex; align-items: center; justify-content: center; }
         .pinch-icon svg { width: 20px; height: 20px; color: var(--accent); }
         .pinch-text { font-size: 12px; color: var(--text); line-height: 1.4; }
         .pinch-text strong { color: var(--accent); }
-        /* Toast */
-        #toast {
-            position: fixed; bottom: 76px; left: 50%;
-            transform: translateX(-50%) translateY(16px);
-            background: var(--panel); backdrop-filter: blur(16px);
-            border: 1px solid var(--panel-border); border-radius: 10px;
-            padding: 8px 18px; color: var(--text); font-size: 12.5px;
-            z-index: 200; opacity: 0; transition: all .25s; pointer-events: none;
-        }
+        #toast { position: fixed; bottom: 76px; left: 50%; transform: translateX(-50%) translateY(16px); background: var(--panel); backdrop-filter: blur(16px); border: 1px solid var(--panel-border); border-radius: 10px; padding: 8px 18px; color: var(--text); font-size: 12.5px; z-index: 200; opacity: 0; transition: all .25s; pointer-events: none; }
         #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
-        /* Welcome screen */
-        #welcome {
-            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
-            background: var(--bg); z-index: 500;
-            display: flex; flex-direction: column; align-items: center; justify-content: center;
-            transition: opacity .55s ease;
-        }
+        #welcome { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: var(--bg); z-index: 500; display: flex; flex-direction: column; align-items: center; justify-content: center; transition: opacity .55s ease; }
         #welcome.hidden { opacity: 0; pointer-events: none; }
-        .w-logo { width: 72px; height: 72px; background: var(--accent); border-radius: 20px;
-            display: flex; align-items: center; justify-content: center;
-            margin-bottom: 28px; box-shadow: 0 0 50px rgba(0,229,160,0.3);
-            animation: wFloat 3s ease-in-out infinite; }
+        .w-logo { width: 72px; height: 72px; background: var(--accent); border-radius: 20px; display: flex; align-items: center; justify-content: center; margin-bottom: 28px; box-shadow: 0 0 50px rgba(0,229,160,0.3); animation: wFloat 3s ease-in-out infinite; }
         @keyframes wFloat { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
         .w-logo svg { width: 34px; height: 34px; }
         .w-title { font-size: 30px; font-weight: 700; color: var(--text); margin-bottom: 6px; letter-spacing: -.5px; }
@@ -185,51 +106,23 @@
         .w-features { display: flex; gap: 16px; margin-bottom: 28px; flex-wrap: wrap; justify-content: center; }
         .w-feat { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-muted); }
         .w-feat svg { width: 16px; height: 16px; color: var(--accent); flex-shrink: 0; }
-        .w-btn { background: var(--accent); color: #0a0a0a; border: none;
-            padding: 13px 36px; border-radius: 11px;
-            font-family: 'Space Grotesk', sans-serif; font-size: 15px; font-weight: 600;
-            cursor: pointer; transition: all .2s; }
+        .w-btn { background: var(--accent); color: #0a0a0a; border: none; padding: 13px 36px; border-radius: 11px; font-family: 'Space Grotesk', sans-serif; font-size: 15px; font-weight: 600; cursor: pointer; transition: all .2s; }
         .w-btn:hover { background: var(--accent-hover); transform: translateY(-2px); box-shadow: 0 6px 24px rgba(0,229,160,0.3); }
-        .w-fallback { margin-top: 12px; font-size: 11.5px; color: var(--text-muted); cursor: pointer;
-            text-decoration: underline; text-underline-offset: 2px; background: none; border: none;
-            font-family: inherit; }
-        /* Camera help text */
-        #cameraHelp {
-            margin-top: 12px;
-            font-size: 11px;
-            color: var(--text-muted);
-            max-width: 280px;
-            line-height: 1.4;
-            text-align: center;
-        }
-        /* Modal */
-        .modal-bg { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
-            background: rgba(0,0,0,0.55); z-index: 250; display: none; }
+        .w-fallback { margin-top: 12px; font-size: 11.5px; color: var(--text-muted); cursor: pointer; text-decoration: underline; text-underline-offset: 2px; background: none; border: none; font-family: inherit; }
+        #cameraHelp { margin-top: 12px; font-size: 11px; color: var(--text-muted); max-width: 280px; line-height: 1.4; text-align: center; }
+        .modal-bg { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.55); z-index: 250; display: none; }
         .modal-bg.vis { display: block; }
-        .modal {
-            position: fixed; top: 50%; left: 50%; transform: translate(-50%,-50%);
-            background: var(--panel); backdrop-filter: blur(28px);
-            border: 1px solid var(--panel-border); border-radius: var(--radius);
-            padding: 24px 28px; z-index: 300; min-width: 300px; display: none;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.55); }
+        .modal { position: fixed; top: 50%; left: 50%; transform: translate(-50%,-50%); background: var(--panel); backdrop-filter: blur(28px); border: 1px solid var(--panel-border); border-radius: var(--radius); padding: 24px 28px; z-index: 300; min-width: 300px; display: none; box-shadow: 0 20px 60px rgba(0,0,0,0.55); }
         .modal.vis { display: block; }
         .modal h3 { color: var(--text); font-size: 15px; margin-bottom: 14px; font-weight: 600; }
         .sc-row { display: flex; justify-content: space-between; padding: 5px 0; font-size: 12.5px; }
         .sc-row span:first-child { color: var(--text-muted); }
-        .sc-key { background: rgba(255,255,255,0.07); padding: 2px 8px; border-radius: 4px;
-            color: var(--accent); font-size: 11px; font-family: 'JetBrains Mono', monospace; }
-        /* Loading overlay */
-        #loadingOverlay {
-            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
-            background: rgba(11,11,15,0.9); z-index: 450; display: none;
-            flex-direction: column; align-items: center; justify-content: center; gap: 16px;
-        }
+        .sc-key { background: rgba(255,255,255,0.07); padding: 2px 8px; border-radius: 4px; color: var(--accent); font-size: 11px; font-family: 'JetBrains Mono', monospace; }
+        #loadingOverlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(11,11,15,0.9); z-index: 450; display: none; flex-direction: column; align-items: center; justify-content: center; gap: 16px; }
         #loadingOverlay.show { display: flex; }
-        .loader { width: 40px; height: 40px; border: 3px solid rgba(255,255,255,0.1);
-            border-top-color: var(--accent); border-radius: 50%; animation: spin .8s linear infinite; }
+        .loader { width: 40px; height: 40px; border: 3px solid rgba(255,255,255,0.1); border-top-color: var(--accent); border-radius: 50%; animation: spin .8s linear infinite; }
         @keyframes spin { to { transform: rotate(360deg); } }
         .loader-text { font-size: 13px; color: var(--text-muted); }
-        /* Responsive tweaks */
         @media(max-width:768px) {
             .top-bar { top: 8px; padding: 4px 6px; gap: 2px; }
             .logo-text { display: none; }
@@ -241,16 +134,13 @@
             .current-color { width: 26px; height: 26px; }
             .status-label { display: none; }
         }
-        @media(prefers-reduced-motion:reduce) {
-            *, *::before, *::after { animation-duration: .01ms!important; transition-duration: .01ms!important; }
-        }
+        @media(prefers-reduced-motion:reduce) { *, *::before, *::after { animation-duration: .01ms!important; transition-duration: .01ms!important; } }
     </style>
 </head>
 <body>
 
 <div id="ambientBg"></div>
 
-<!-- Welcome screen -->
 <div id="welcome">
     <div class="w-logo">
         <svg viewBox="0 0 24 24" fill="none" stroke="#0a0a0a" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
@@ -265,7 +155,6 @@
         <div class="w-feat"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 19l7-7 3 3-7 7-3-3z"/><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/></svg>Freehand Drawing</div>
         <div class="w-feat"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Export PNG</div>
     </div>
-    <!-- FIXED WELCOME BUTTONS WITH CAMERA HELP -->
     <button class="w-btn" id="startCamBtn">Enable Camera and Start</button>
     <div id="cameraHelp">
         <strong>📱 iOS/Android:</strong> Allow camera when prompted<br>
@@ -275,24 +164,19 @@
     <button class="w-fallback" id="startMouseBtn">Continue without camera (mouse only)</button>
 </div>
 
-<!-- Loading overlay -->
 <div id="loadingOverlay">
     <div class="loader"></div>
     <div class="loader-text" id="loadingText">Loading hand tracking model...</div>
 </div>
 
-<!-- Hidden video feed for camera -->
 <video id="video" playsinline style="display:none"></video>
 
-<!-- Canvases -->
 <canvas id="bgCanvas"></canvas>
 <canvas id="drawCanvas"></canvas>
 <div id="gridOverlay"></div>
 
-<!-- Finger cursor (visual feedback) -->
 <div id="fingerCursor" class="idle"></div>
 
-<!-- Pinch hint -->
 <div id="pinchHint">
     <div class="pinch-icon">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -302,7 +186,6 @@
     <div class="pinch-text"><strong>Pinch</strong> thumb + index finger to draw<br><strong>Release</strong> to stop</div>
 </div>
 
-<!-- Top bar -->
 <div class="panel top-bar" id="topBar">
     <div class="logo">
         <div class="logo-icon">
@@ -333,7 +216,7 @@
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
     </button>
     <button class="tb" id="clearBtn" title="Clear" aria-label="Clear canvas">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2 2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
     </button>
     <div class="sep"></div>
     <button class="tb" id="downloadBtn" title="Save PNG (Ctrl+S)" aria-label="Download PNG">
@@ -344,10 +227,658 @@
     </button>
 </div>
 
-<!-- Left toolbar -->
 <div class="panel left-toolbar" id="leftToolbar">
     <button class="tb active" data-tool="pen" title="Pen (P)" aria-label="Pen">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19l7-7 3 3-7 7-3-3z"/><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/><path d="M2 2l7.586 7.586"/><circle cx="11" cy="11" r="2"/></svg>
     </button>
     <button class="tb" data-tool="eraser" title="Eraser (E)" aria-label="Eraser">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m7 21-4.3-4.3c-1-1-1-2.5 0-0l9.6-9.6c1-1 2.5-1 3.4 0l5.6 5.6c1 1 1 2.5 0 3.4L13 2-3.4l9.6-9.6c1-1 2.5-1 3.4 0l5.6 5.6c1 1 1 2.5 0 3.4L13 21"/><path d="M22 21 
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m7 21-4.3-4.3c-1-1-1-2.5 0-3.4l9.6-9.6c1-1 2.5-1 3.4 0l5.6 5.6c1 1 1 2.5 0 3.4L13 21"/><path d="M22 21H7"/><path d="m5 11 9 9"/></svg>
+    </button>
+    <button class="tb" data-tool="line" title="Line (L)" aria-label="Line">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="5" y1="19" x2="19" y2="5"/></svg>
+    </button>
+    <button class="tb" data-tool="rect" title="Rectangle (R)" aria-label="Rectangle">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/></svg>
+    </button>
+    <button class="tb" data-tool="circle" title="Circle (C)" aria-label="Circle">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/></svg>
+    </button>
+</div>
+
+<div class="panel bottom-bar" id="bottomBar">
+    <div class="current-color" id="currentColorBox" style="background:#ffffff"></div>
+    <div class="color-swatches" id="swatches"></div>
+    <div class="cpick-wrap">
+        <input type="color" id="customColor" value="#00e5a0" aria-label="Custom color">
+        <div class="cpick-display"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></div>
+    </div>
+    <div class="bar-sep"></div>
+    <div class="slider-group">
+        <span class="slider-label">Size</span>
+        <input type="range" id="sizeRange" min="1" max="60" value="4" aria-label="Brush size">
+        <span class="slider-val" id="sizeVal">4</span>
+    </div>
+    <div class="bar-sep"></div>
+    <div class="slider-group">
+        <span class="slider-label">Opacity</span>
+        <input type="range" id="opacRange" min="5" max="100" value="100" aria-label="Opacity">
+        <span class="slider-val" id="opacVal">100</span>
+    </div>
+</div>
+
+<div id="toast"></div>
+
+<div class="modal-bg" id="modalBg"></div>
+<div class="modal" id="modal">
+    <h3>Controls and Shortcuts</h3>
+    <div class="sc-row"><span>Pinch thumb + index</span><span class="sc-key">Draw</span></div>
+    <div class="sc-row"><span>Release pinch</span><span class="sc-key">Stop</span></div>
+    <div style="border-top:1px solid var(--panel-border);margin:8px 0"></div>
+    <div class="sc-row"><span>Pen</span><span class="sc-key">P</span></div>
+    <div class="sc-row"><span>Eraser</span><span class="sc-key">E</span></div>
+    <div class="sc-row"><span>Line</span><span class="sc-key">L</span></div>
+    <div class="sc-row"><span>Rectangle</span><span class="sc-key">R</span></div>
+    <div class="sc-row"><span>Circle</span><span class="sc-key">C</span></div>
+    <div class="sc-row"><span>Undo</span><span class="sc-key">Ctrl+Z</span></div>
+    <div class="sc-row"><span>Redo</span><span class="sc-key">Ctrl+Y</span></div>
+    <div class="sc-row"><span>Grid</span><span class="sc-key">G</span></div>
+    <div class="sc-row"><span>Toggle camera feed</span><span class="sc-key">V</span></div>
+    <div class="sc-row"><span>Save PNG</span><span class="sc-key">Ctrl+S</span></div>
+    <div class="sc-row"><span>Brush size</span><span class="sc-key">] / [</span></div>
+    <div class="sc-row"><span>Close</span><span class="sc-key">Esc</span></div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
+
+<script>
+(function(){
+    'use strict';
+
+    const bgCanvas   = document.getElementById('bgCanvas');
+    const bgCtx      = bgCanvas.getContext('2d');
+    const drawCanvas = document.getElementById('drawCanvas');
+    const ctx        = drawCanvas.getContext('2d');
+    const videoEl    = document.getElementById('video');
+    const cursorEl   = document.getElementById('fingerCursor');
+    const gridOvl    = document.getElementById('gridOverlay');
+    const toastEl    = document.getElementById('toast');
+    const sizeR      = document.getElementById('sizeRange');
+    const opacR      = document.getElementById('opacRange');
+    const sizeV      = document.getElementById('sizeVal');
+    const opacV      = document.getElementById('opacVal');
+    const custCol    = document.getElementById('customColor');
+    const swatchBox  = document.getElementById('swatches');
+    const colBox     = document.getElementById('currentColorBox');
+    const modal      = document.getElementById('modal');
+    const modalBg    = document.getElementById('modalBg');
+    const camDot     = document.getElementById('camDot');
+    const handDot    = document.getElementById('handDot');
+    const camLabel   = document.getElementById('camLabel');
+    const handLabel  = document.getElementById('handLabel');
+    const pinchHint  = document.getElementById('pinchHint');
+    const loadingOvl = document.getElementById('loadingOverlay');
+    const loadingTxt = document.getElementById('loadingText');
+
+    const buf = document.createElement('canvas');
+    const bCtx = buf.getContext('2d');
+
+    let tool     = 'pen';
+    let color    = '#ffffff';
+    let bSize    = 4;
+    let bOpacity = 1;
+    let strokes  = [];
+    let undos    = [];
+    let gridOn   = false;
+    let dpr      = 1;
+    let cssW, cssH;
+
+    let cameraActive  = false;
+    let showCamFeed   = true;
+    let handDetected  = false;
+
+    let camDrawing     = false;
+    let camWasPinching = false;
+    let camCurStroke   = null;
+    let smoothX = 0, smoothY = 0;
+    let smoothInited   = false;
+    let pinchCount     = 0;
+
+    let mouseDrawing   = false;
+    let mouseCurStroke = null;
+
+    const palette = [
+        '#ffffff','#c8c8c8','#888888','#444444','#000000',
+        '#ff3b30','#ff6b35','#ff9500','#ffcc00','#a8d65c',
+        '#34c759','#00c7be','#32ade6','#007aff','#5856d6',
+        '#af52de','#ff2d55','#ff85a2','#a2845e','#64d2ff'
+    ];
+
+    const CONNECTIONS = [
+        [0,1],[1,2],[2,3],[3,4],
+        [0,5],[5,6],[6,7],[7,8],
+        [5,9],[9,10],[10,11],[11,12],
+        [9,13],[13,14],[14,15],[15,16],
+        [13,17],[17,18],[18,19],[19,20],
+        [0,17]
+    ];
+    const TIPS = [4,8,12,16,20];
+
+    function resize(){
+        dpr = window.devicePixelRatio || 1;
+        cssW = window.innerWidth;
+        cssH = window.innerHeight;
+        [bgCanvas, drawCanvas, buf].forEach(c => {
+            c.width  = cssW * dpr;
+            c.height = cssH * dpr;
+        });
+        bgCanvas.style.width  = cssW + 'px'; bgCanvas.style.height = cssH + 'px';
+        drawCanvas.style.width = cssW + 'px'; drawCanvas.style.height = cssH + 'px';
+        bgCtx.setTransform(dpr,0,0,dpr,0,0);
+        ctx.setTransform(dpr,0,0,dpr,0,0);
+        bCtx.setTransform(dpr,0,0,dpr,0,0);
+        rebuildBuffer();
+    }
+
+    function renderStroke(c, s){
+        c.save();
+        c.globalCompositeOperation = s.comp || 'source-over';
+        c.globalAlpha = s.opacity;
+        c.strokeStyle = s.color;
+        c.fillStyle   = s.color;
+        c.lineWidth   = s.size;
+        c.lineCap     = 'round';
+        c.lineJoin    = 'round';
+        if(s.type === 'freehand'){
+            const pts = s.points;
+            if(pts.length < 2){
+                c.beginPath();
+                c.arc(pts[0].x, pts[0].y, Math.max(0.5, s.size/2), 0, Math.PI*2);
+                c.fill();
+            } else {
+                c.beginPath();
+                c.moveTo(pts[0].x, pts[0].y);
+                if(pts.length === 2){
+                    c.lineTo(pts[1].x, pts[1].y);
+                } else {
+                    for(let i=1; i<pts.length-1; i++){
+                        const mx = (pts[i].x + pts[i+1].x)/2;
+                        const my = (pts[i].y + pts[i+1].y)/2;
+                        c.quadraticCurveTo(pts[i].x, pts[i].y, mx, my);
+                    }
+                    c.lineTo(pts[pts.length-1].x, pts[pts.length-1].y);
+                }
+                c.stroke();
+            }
+        } else if(s.type === 'line'){
+            c.beginPath(); c.moveTo(s.x1,s.y1); c.lineTo(s.x2,s.y2); c.stroke();
+        } else if(s.type === 'rect'){
+            c.beginPath(); c.rect(s.x1,s.y1,s.x2-s.x1,s.y2-s.y1); c.stroke();
+        } else if(s.type === 'ellipse'){
+            const rx = Math.max(1, Math.abs(s.x2-s.x1)/2);
+            const ry = Math.max(1, Math.abs(s.y2-s.y1)/2);
+            c.beginPath();
+            c.ellipse((s.x1+s.x2)/2, (s.y1+s.y2)/2, rx, ry, 0, 0, Math.PI*2);
+            c.stroke();
+        }
+        c.restore();
+    }
+
+    function rebuildBuffer(){
+        bCtx.clearRect(0,0,cssW,cssH);
+        strokes.forEach(s => renderStroke(bCtx, s));
+        compositeDraw();
+    }
+
+    function compositeDraw(){
+        ctx.setTransform(1,0,0,1,0,0);
+        ctx.clearRect(0,0,drawCanvas.width,drawCanvas.height);
+        ctx.drawImage(buf,0,0);
+        ctx.setTransform(dpr,0,0,dpr,0,0);
+        if(camCurStroke) renderStroke(ctx, camCurStroke);
+        if(mouseCurStroke) renderStroke(ctx, mouseCurStroke);
+    }
+
+    function camStartDraw(x, y){
+        if(tool === 'pen' || tool === 'eraser'){
+            camCurStroke = {
+                type:'freehand', tool,
+                color: tool==='eraser'?'#000':color,
+                size: bSize,
+                opacity: tool==='eraser'?1:bOpacity,
+                comp: tool==='eraser'?'destination-out':'source-over',
+                points:[{x,y}]
+            };
+        } else {
+            camCurStroke = {
+                type:tool, color, size:bSize, opacity:bOpacity,
+                comp:'source-over', x1:x, y1:y, x2:x, y2:y
+            };
+        }
+    }
+
+    function camContinueDraw(x, y){
+        if(!camCurStroke) return;
+        if(camCurStroke.type === 'freehand'){
+            const pts = camCurStroke.points;
+            const last = pts[pts.length-1];
+            const dx = x - last.x, dy = y - last.y;
+            if(dx*dx + dy*dy > 4) pts.push({x,y});
+        } else {
+            camCurStroke.x2 = x;
+            camCurStroke.y2 = y;
+        }
+        compositeDraw();
+    }
+
+    function camEndDraw(){
+        if(!camCurStroke) return;
+        if(camCurStroke.type==='freehand' && camCurStroke.points.length===1){
+            camCurStroke.points.push({x:camCurStroke.points[0].x+0.1, y:camCurStroke.points[0].y+0.1});
+        }
+        strokes.push(camCurStroke);
+        undos = [];
+        renderStroke(bCtx, camCurStroke);
+        camCurStroke = null;
+        compositeDraw();
+    }
+
+    function mousePos(e){
+        const r = drawCanvas.getBoundingClientRect();
+        return {x: e.clientX - r.left, y: e.clientY - r.top};
+    }
+
+    drawCanvas.addEventListener('pointerdown', e=>{
+        e.preventDefault();
+        drawCanvas.setPointerCapture(e.pointerId);
+        mouseDrawing = true;
+        const p = mousePos(e);
+        if(tool==='pen'||tool==='eraser'){
+            mouseCurStroke = {
+                type:'freehand', tool,
+                color: tool==='eraser'?'#000':color,
+                size:bSize, opacity:tool==='eraser'?1:bOpacity,
+                comp:tool==='eraser'?'destination-out':'source-over',
+                points:[p]
+            };
+        } else {
+            mouseCurStroke = {
+                type:tool, color, size:bSize, opacity:bOpacity,
+                comp:'source-over', x1:p.x, y1:p.y, x2:p.x, y2:p.y
+            };
+        }
+    });
+
+    drawCanvas.addEventListener('pointermove', e=>{
+        e.preventDefault();
+        if(!mouseDrawing||!mouseCurStroke) return;
+        const p = mousePos(e);
+        if(mouseCurStroke.type==='freehand'){
+            mouseCurStroke.points.push(p);
+        } else {
+            mouseCurStroke.x2=p.x; mouseCurStroke.y2=p.y;
+        }
+        compositeDraw();
+    });
+
+    drawCanvas.addEventListener('pointerup', e=>{
+        if(!mouseDrawing||!mouseCurStroke){mouseDrawing=false;return;}
+        mouseDrawing=false;
+        if(mouseCurStroke.type==='freehand'&&mouseCurStroke.points.length===1){
+            mouseCurStroke.points.push({x:mouseCurStroke.points[0].x+0.1,y:mouseCurStroke.points[0].y+0.1});
+        }
+        strokes.push(mouseCurStroke);
+        undos=[];
+        renderStroke(bCtx, mouseCurStroke);
+        mouseCurStroke=null;
+        compositeDraw();
+    });
+    drawCanvas.addEventListener('pointerleave', ()=>{if(mouseDrawing){mouseDrawing=false;camEndDraw();}});
+    drawCanvas.addEventListener('pointercancel', ()=>{mouseDrawing=false;});
+    drawCanvas.addEventListener('touchstart', e=>e.preventDefault(),{passive:false});
+    drawCanvas.addEventListener('touchmove', e=>e.preventDefault(),{passive:false});
+
+    let mpHands = null;
+    let mpCamera = null;
+
+    function initHands(){
+        mpHands = new Hands({
+            locateFile: file => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`
+        });
+        mpHands.setOptions({
+            maxNumHands: 1,
+            modelComplexity: 1,
+            minDetectionConfidence: 0.7,
+            minTrackingConfidence: 0.5
+        });
+        mpHands.onResults(onHandResults);
+    }
+
+    async function startCamera(){
+        loadingOvl.classList.add('show');
+        loadingTxt.textContent = 'Requesting camera access...';
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({
+                video: {
+                    facingMode: "user",
+                    width: { ideal: 1280 },
+                    height: { ideal: 720 },
+                    frameRate: { ideal: 30 }
+                },
+                audio: false
+            });
+            
+            videoEl.playsInline = true;
+            videoEl.muted = true;
+            videoEl.srcObject = stream;
+            
+            await new Promise(resolve => {
+                if (videoEl.readyState >= 2) resolve();
+                else videoEl.onloadeddata = resolve;
+            });
+            await videoEl.play();
+
+            if(!mpHands) initHands();
+            
+            mpCamera = new Camera(videoEl, {
+                onFrame: async () => {
+                    if (cameraActive && videoEl.readyState >= 2) {
+                        await mpHands.send({image: videoEl});
+                    }
+                },
+                width: 1280,
+                height: 720
+            });
+            mpCamera.start();
+
+            cameraActive = true;
+            camDot.classList.remove('off'); camDot.classList.add('on');
+            camLabel.textContent = 'Cam';
+            loadingOvl.classList.remove('show');
+            showToast('Camera active — pinch to draw!');
+            pinchHint.classList.add('show');
+
+        } catch(err){
+            console.error('Camera error:', err);
+            loadingOvl.classList.remove('show');
+            let msg = 'Camera unavailable';
+            if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+                msg = 'Permission denied. Click lock icon in address bar to allow camera.';
+            } else if (err.name === 'NotFoundError') {
+                msg = 'No camera found on this device.';
+            } else if (err.name === 'NotReadableError') {
+                msg = 'Camera is in use by another app.';
+            } else {
+                msg = 'Must use HTTPS (GitHub Pages) or localhost.';
+            }
+            showToast(`❌ ${msg}`);
+            cameraActive = false;
+            camLabel.textContent = 'Off';
+        }
+    }
+
+    function onHandResults(results){
+        bgCtx.save();
+        bgCtx.clearRect(0,0,cssW,cssH);
+
+        if(showCamFeed && results.image){
+            bgCtx.translate(cssW, 0);
+            bgCtx.scale(-1, 1);
+            bgCtx.drawImage(results.image, 0, 0, cssW, cssH);
+            bgCtx.restore();
+            bgCtx.fillStyle = 'rgba(11,11,15,0.35)';
+            bgCtx.fillRect(0,0,cssW,cssH);
+        } else {
+            bgCtx.restore();
+        }
+
+        if(results.multiHandLandmarks && results.multiHandLandmarks.length > 0){
+            const lm = results.multiHandLandmarks[0];
+            handDetected = true;
+            handDot.classList.remove('off'); handDot.classList.add('on');
+            handLabel.textContent = 'Hand';
+
+            drawSkeleton(bgCtx, lm);
+
+            const indexTip = lm[8];
+            const thumbTip = lm[4];
+
+            const rawX = (1 - indexTip.x) * cssW;
+            const rawY = indexTip.y * cssH;
+
+            if(!smoothInited){ smoothX=rawX; smoothY=rawY; smoothInited=true; }
+            smoothX = smoothX*0.55 + rawX*0.45;
+            smoothY = smoothY*0.55 + rawY*0.45;
+
+            const dx = indexTip.x - thumbTip.x;
+            const dy = indexTip.y - thumbTip.y;
+            const dz = (indexTip.z||0) - (thumbTip.z||0);
+            const dist = Math.sqrt(dx*dx + dy*dy + dz*dz);
+            const isPinching = dist < 0.065;
+
+            updateFingerCursor(smoothX, smoothY, isPinching);
+
+            if(isPinching && !camWasPinching){
+                camStartDraw(smoothX, smoothY);
+                camDrawing = true;
+                pinchCount++;
+                if(pinchCount >= 3) pinchHint.classList.remove('show');
+            } else if(isPinching && camWasPinching){
+                camContinueDraw(smoothX, smoothY);
+            } else if(!isPinching && camWasPinching){
+                camEndDraw();
+                camDrawing = false;
+            }
+            camWasPinching = isPinching;
+
+        } else {
+            handDetected = false;
+            handDot.classList.remove('on'); handDot.classList.add('off');
+            handLabel.textContent = 'No Hand';
+            smoothInited = false;
+            if(camWasPinching){
+                camEndDraw();
+                camDrawing = false;
+                camWasPinching = false;
+            }
+            cursorEl.style.display = 'none';
+        }
+    }
+
+    function drawSkeleton(c, landmarks){
+        c.save();
+        c.strokeStyle = 'rgba(255,255,255,0.6)';
+        c.lineWidth = 2;
+        c.lineCap = 'round';
+        c.lineJoin = 'round';
+
+        CONNECTIONS.forEach(([i,j])=>{
+            const p1 = {x: (1 - landmarks[i].x) * cssW, y: landmarks[i].y * cssH};
+            const p2 = {x: (1 - landmarks[j].x) * cssW, y: landmarks[j].y * cssH};
+            c.beginPath();
+            c.moveTo(p1.x, p1.y);
+            c.lineTo(p2.x, p2.y);
+            c.stroke();
+        });
+
+        c.fillStyle = 'rgba(0,229,160,0.8)';
+        TIPS.forEach(i=>{
+            const p = {x: (1 - landmarks[i].x) * cssW, y: landmarks[i].y * cssH};
+            c.beginPath();
+            c.arc(p.x, p.y, 4, 0, Math.PI*2);
+            c.fill();
+        });
+
+        c.restore();
+    }
+
+    function updateFingerCursor(cx, cy, isPinching){
+        if(tool === 'pen' || tool === 'eraser'){
+            cursorEl.style.display = 'block';
+            cursorEl.style.left = cx + 'px';
+            cursorEl.style.top  = cy + 'px';
+            const size = Math.max(6, bSize * 1.5);
+            cursorEl.style.width  = size + 'px';
+            cursorEl.style.height = size + 'px';
+            cursorEl.className = isPinching ? 'active' : 'idle';
+        } else {
+            cursorEl.style.display = 'none';
+        }
+    }
+
+    function initSwatches(){
+        swatchBox.innerHTML = '';
+        palette.forEach(c => {
+            const d = document.createElement('div');
+            d.className = 'csw' + (c===color?' active':'');
+            d.style.background = c;
+            if(c === '#ffffff') d.style.border = '2px solid rgba(255,255,255,0.25)';
+            d.addEventListener('click', ()=> pickColor(c));
+            swatchBox.appendChild(d);
+        });
+    }
+
+    function pickColor(c){
+        color = c;
+        colBox.style.background = c;
+        colBox.style.boxShadow = `0 0 14px ${c}44`;
+        document.querySelectorAll('.csw').forEach(s => {
+            s.classList.toggle('active', toHex(s.style.background) === c.toLowerCase());
+        });
+        custCol.value = c.length===7 ? c : '#ffffff';
+    }
+
+    function toHex(rgb){
+        if(rgb.startsWith('#')) return rgb.toLowerCase();
+        const m = rgb.match(/\d+/g);
+        if(!m) return rgb;
+        return '#'+m.slice(0,3).map(x=>parseInt(x).toString(16).padStart(2,'0')).join('');
+    }
+
+    function selectTool(t){
+        tool = t;
+        document.querySelectorAll('#leftToolbar .tb').forEach(b =>
+            b.classList.toggle('active', b.dataset.tool === t));
+        drawCanvas.style.cursor = (t==='pen'||t==='eraser') ? 'none' : 'crosshair';
+        if(t!=='pen'&&t!=='eraser') cursorEl.style.display='none';
+    }
+
+    function undo(){
+        if(!strokes.length) return;
+        undos.push(strokes.pop());
+        rebuildBuffer();
+        showToast('Undo');
+    }
+    function redo(){
+        if(!undos.length) return;
+        strokes.push(undos.pop());
+        rebuildBuffer();
+        showToast('Redo');
+    }
+    function clearAll(){
+        if(!strokes.length) return;
+        undos.push(...strokes);
+        strokes = [];
+        rebuildBuffer();
+        showToast('Canvas cleared');
+    }
+    function toggleGrid(){
+        gridOn = !gridOn;
+        gridOvl.classList.toggle('visible', gridOn);
+        document.getElementById('gridBtn').classList.toggle('active', gridOn);
+    }
+    function toggleCamFeed(){
+        showCamFeed = !showCamFeed;
+        document.getElementById('camToggleBtn').classList.toggle('active', showCamFeed);
+        showToast(showCamFeed ? 'Camera feed visible' : 'Camera feed hidden');
+    }
+    function download(){
+        const exp = document.createElement('canvas');
+        exp.width = drawCanvas.width; exp.height = drawCanvas.height;
+        const ec = exp.getContext('2d');
+        ec.fillStyle = '#ffffff';
+        ec.fillRect(0,0,exp.width,exp.height);
+        ec.drawImage(buf,0,0);
+        const a = document.createElement('a');
+        a.download = 'open-canvas-'+Date.now()+'.png';
+        a.href = exp.toDataURL('image/png');
+        a.click();
+        showToast('Saved as PNG');
+    }
+    function toggleModal(show){
+        modal.classList.toggle('vis', show);
+        modalBg.classList.toggle('vis', show);
+    }
+
+    let tTimer;
+    function showToast(msg){
+        toastEl.textContent = msg;
+        toastEl.classList.add('show');
+        clearTimeout(tTimer);
+        tTimer = setTimeout(()=> toastEl.classList.remove('show'), 2500);
+    }
+
+    document.querySelectorAll('#leftToolbar .tb').forEach(b =>
+        b.addEventListener('click', ()=> selectTool(b.dataset.tool)));
+
+    document.getElementById('undoBtn').addEventListener('click', undo);
+    document.getElementById('redoBtn').addEventListener('click', redo);
+    document.getElementById('clearBtn').addEventListener('click', clearAll);
+    document.getElementById('gridBtn').addEventListener('click', toggleGrid);
+    document.getElementById('camToggleBtn').addEventListener('click', toggleCamFeed);
+    document.getElementById('downloadBtn').addEventListener('click', download);
+    document.getElementById('helpBtn').addEventListener('click', ()=> toggleModal(true));
+    modalBg.addEventListener('click', ()=> toggleModal(false));
+
+    sizeR.addEventListener('input', e=>{ bSize=+e.target.value; sizeV.textContent=bSize; });
+    opacR.addEventListener('input', e=>{ bOpacity=+e.target.value/100; opacV.textContent=e.target.value; });
+    custCol.addEventListener('input', e=> pickColor(e.target.value));
+
+    document.getElementById('startCamBtn').addEventListener('click', ()=>{
+        const w = document.getElementById('welcome');
+        w.classList.add('hidden');
+        setTimeout(()=> w.style.display='none', 560);
+        startCamera();
+    });
+    document.getElementById('startMouseBtn').addEventListener('click',()=>{
+        const w = document.getElementById('welcome');
+        w.classList.add('hidden');
+        setTimeout(()=> w.style.display='none', 560);
+        showToast('Mouse mode — click and drag to draw');
+    });
+
+    document.addEventListener('keydown', e=>{
+        if(e.target.tagName==='INPUT') return;
+        if(e.ctrlKey||e.metaKey){
+            if(e.key==='z'){ e.preventDefault(); undo(); }
+            else if(e.key==='y'){ e.preventDefault(); redo(); }
+            else if(e.key==='s'){ e.preventDefault(); download(); }
+            return;
+        }
+        switch(e.key.toLowerCase()){
+            case'p': selectTool('pen'); break;
+            case'e': selectTool('eraser'); break;
+            case'l': selectTool('line'); break;
+            case'r': selectTool('rect'); break;
+            case'c': selectTool('circle'); break;
+            case'g': toggleGrid(); break;
+            case'v': toggleCamFeed(); break;
+            case']': bSize=Math.min(60,bSize+2); sizeR.value=bSize; sizeV.textContent=bSize; break;
+            case'[': bSize=Math.max(1,bSize-2); sizeR.value=bSize; sizeV.textContent=bSize; break;
+            case'?': toggleModal(true); break;
+            case'escape': toggleModal(false); break;
+        }
+    });
+
+    window.addEventListener('resize', resize);
+
+    resize();
+    initSwatches();
+    selectTool('pen');
+    pickColor('#ffffff');
+    document.getElementById('camToggleBtn').classList.add('active');
+
+})();
+</script>
+</body>
+</html>
